@@ -286,9 +286,10 @@ class RestrictionsTestCase(TestCase):
     # Descripcion: Comprobar que se pueden aplicar combinaciones de decoradores de restrictions.py
     # Metodo a Probar: @is_authenticated, {@is_admin, @is_teacher, @is_student}
     # Datos de la Prueba: {admin_user, teacher_user, student_user}
-    # Resultado Esperado:
+    # Resultado Esperado: Autenticacion aceptada y rol valido.
     # Nota del QA: @is_admin, @is_teacher y @is_student se pueden considerar de una misma clase de metodo
-    #                para el contexto de la prueba y estos no se esperan que se combinen entre si.
+    #                para el contexto de la prueba y estos no se esperan que se combinen entre si. 
+    #               Ademas, estos se esperan ser combinados con su dato de prueba correspondiente para el exito.
     def test_multiple_decorators_combination(self):
         @is_authenticated
         @is_admin
