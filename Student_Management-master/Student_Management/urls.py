@@ -58,8 +58,8 @@ urlpatterns = [
     path('a_removenotes/<int:notes_id>',v_admin.a_removenotes),
 
     #Teacher URL's
-    path('teacherhome/', v_teacher.t_home),
-    path('teacherprofile/',v_teacher.t_profile),
+    path('teacherhome/', v_teacher.t_home, name='t_home'),
+    path('teacherprofile/', v_teacher.t_profile, name='t_profile'),    
     path('t_saveprofile',v_teacher.t_saveprofile),
     path('t_addstudent/', v_teacher.t_addstudent),
     path('t_savestudent',v_teacher.t_savestudent),
