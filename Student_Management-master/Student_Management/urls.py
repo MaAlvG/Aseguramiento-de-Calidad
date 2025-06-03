@@ -82,10 +82,10 @@ urlpatterns = [
     path('t_viewnotes/',v_teacher.t_viewnotes),
 
     #Student URL's
-    path('studenthome/', v_student.s_home),
-    path('studentprofile/',v_student.s_profile),
+    path('studenthome/', v_student.s_home, name='s_home'),
+    path('studentprofile/',v_student.s_profile, name='s_profile'),
     path('s_saveprofile',v_student.s_saveprofile),
-    path('s_viewresult/',v_student.s_viewresult),
+    path('s_viewresult/',v_student.s_viewresult, name='s_viewresult'),
     path('s_viewnotification/',v_student.s_viewnotification),
     path('s_viewnotes/', v_student.s_viewnotes),
 

@@ -1,7 +1,7 @@
 from django.test import TestCase, RequestFactory
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from Main_App.models import MyUser
 from Main_App.restrictions import is_authenticated, is_admin, is_teacher, is_student
 
