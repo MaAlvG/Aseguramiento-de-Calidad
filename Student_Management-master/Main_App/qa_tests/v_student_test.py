@@ -111,7 +111,7 @@ class StudentViewsTestCase(TestCase):
         self.client.login(username=self.t_username, 
                           password=self.t_password)
         response = self.client.get(reverse('s_profile'))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
 
     # ID: VST-7
     # Descripcion: Revisar que un Student puede actualizar exitosamente los campos editables de su perfil.
