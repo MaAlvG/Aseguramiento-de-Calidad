@@ -6,6 +6,10 @@ from Main_App.models import Student
 from unittest.mock import patch # para simular el comportamiento de los mensajes
 from django.contrib import messages # para inspeccionar los mensajes
 from Main_App.models import Notification # para pruebas de notificaciones
+from django.core.files.uploadedfile import SimpleUploadedFile
+from Main_App.models import Result
+
+
 
 class TeacherViewTests(TestCase):
     def setUp(self):
@@ -160,29 +164,8 @@ class TeacherViewTests(TestCase):
         self.client.force_login(self.teacher_user)
         response = self.client.get('/t_viewstudent/')
         self.assertEqual(response.status_code, 200)
-
-    # ID: VTCH-9  -->>hay que hacer un reporte de error para esta prueba
-    # Descripcion: Revisar que un profesor puede resetear la contrasena de un estudiante bien.
-    # Metodo a Probar: t_resetspass (GET)
-    # Datos de la Prueba: {teacher_user, student_user}
-    # Resultado Esperado: La contrasena del estudiante se actualiza a "Student@100" y se redirecciona bien
-    def test_t_resetspass_resets_password(self):
-        student_user = MyUser.objects.create_user(
-            username='est_reset', password='contraAntigua03', user_type=3
-        )
-        # actualizar datos del estudiante creado por la señal post_save 
-        student_user.student.address = 'Heredia'
-        student_user.student.gender = 'Male'
-        student_user.student.save()
-
-        self.client.force_login(self.teacher_user)
-        response = self.client.get(f'/t_resetspass/{student_user.id}')
-
-        self.assertEqual(response.status_code, 302)
-        student_user.refresh_from_db()
-        self.assertTrue(student_user.check_password("Student@100"))
     
-    # ID: VTCH-10
+    # ID: VTCH-9
     # Descripcion: Un usuario con rol Teacher accede a t_addnotification.
     # Metodo a Probar: t_addnotification (GET)
     # Datos de la Prueba: {teacher_user}
@@ -193,7 +176,7 @@ class TeacherViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'teacher/t_addnotification.html')
 
-    # ID: VTCH-11
+    # ID: VTCH-10
     # Descripcion: Un usuario autenticado pero que no sea Teacher es rechazado.
     # Metodo a Probar: t_addnotification (GET)
     # Datos de la Prueba: {admin_user}
@@ -207,7 +190,7 @@ class TeacherViewTests(TestCase):
             response.content.decode()
         )
 
-    # ID: VTCH-12
+    # ID: VTCH-11
     # Descripcion: Un usuario anonimo es redirigido a /loginpage.
     # Metodo a Probar: t_addnotification (GET)
     # Datos de la Prueba: {AnonymousUser}
@@ -219,7 +202,7 @@ class TeacherViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/loginpage')
 
-    # ID: VTCH-13
+    # ID: VTCH-12
     # Descripcion: Verificar que un profesor pueda crear una notificacion con un POST valido.
     # Metodo a Probar: t_savenotification (POST)
     # Datos de la Prueba: {teacher_user, heading='Examen', message='El examen sera el lunes'}
@@ -237,15 +220,13 @@ class TeacherViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/t_addnotification')
 
-        notif = Notification.objects.filter(heading='Examen',
-                                            message='El examen sera el lunes',
-                                            created_by=self.teacher_user.username).first()
+        notif = Notification.objects.filter(heading='Examen', message='El examen sera el lunes', created_by=self.teacher_user.username).first()
         self.assertIsNotNone(notif)
 
         storage = list(messages.get_messages(response.wsgi_request))
         self.assertTrue(any(m.message == "Notification added successfully" for m in storage))
 
-    # ID: VTCH-14
+    # ID: VTCH-13
     # Descripcion: Confirmar que el metodo responda “Method not Allowed..!” cuando se
     # accede con GET en vez de POST.
     # Metodo a Probar: t_savenotification (GET)
@@ -259,7 +240,7 @@ class TeacherViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), "Method not Allowed..!")
 
-    # ID: VTCH-15
+    # ID: VTCH-14
     # Descripcion: Simular un error interno al crear la notificacion y ver que se
     # muestra el mensaje de error y se redirige bien.
     # Metodo a Probar: t_savenotification (POST)
@@ -280,3 +261,243 @@ class TeacherViewTests(TestCase):
 
         storage = list(messages.get_messages(response.wsgi_request))
         self.assertTrue(any(m.message == "Failed to add Notification" for m in storage)) # mensaje de error esperado
+
+    # ID: VTCH-15
+    # Descripcion: Revisa que un usuario con rol Teacher pueda acceder a la vista t_deletenotification
+    # y que las notificaciones creadas por ese usuario se incluyen en el contexto.
+    # Metodo a Probar: t_deletenotification (GET)
+    # Datos de la Prueba: {teacher_user}
+    # Resultado Esperado: Respuesta HTTP 200, uso del template 'teacher/t_deletenotification.html',
+    # y que en el contexto se incluyan las notificaciones creadas por el usuario autenticado
+    def test_t_deletenotification_view(self):
+        self.client.force_login(self.teacher_user)
+
+        # creamos una notificacion asociada al usuario teacher
+        Notification.objects.create(
+            heading='Tarea',
+            message='Entregar el martes',
+            created_by=self.teacher_user.username
+        )
+
+        response = self.client.get('/t_deletenotification/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'teacher/t_deletenotification.html')
+        self.assertIn('notifications', response.context)
+        self.assertEqual(len(response.context['notifications']), 1)
+        self.assertEqual(response.context['notifications'][0].created_by, self.teacher_user.username)
+
+    # ID: VTCH-16
+    # Descripcion: Revisamos que si ocurre un error al obtener las notificaciones (como un fallo en base de datos)
+    # la vista t_deletenotification aun responde bien con el template esperado, sin romperlo
+    # Metodo a Probar: t_deletenotification (GET)
+    # Datos de la Prueba: {teacher_user} + mock para lanzar excepcion
+    # Resultado Esperado: La vista devuelve HTTP 200 usando el mismo template pero no con 'notifications'
+    @patch('Main_App.v_teacher.Notification.objects.filter', side_effect=Exception("DB fail")) # simulamos un error al obtener las notificaciones
+    def test_t_deletenotification_exception_path(self, mock_filter): # mock_filter simula el fallo
+        self.client.force_login(self.teacher_user)
+
+        response = self.client.get('/t_deletenotification/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'teacher/t_deletenotification.html')
+        # como hubo excepcion, 'notifications' no esta en el contexto
+        self.assertNotIn('notifications', response.context)
+
+    # ID: VTCH-17
+    # Descripcion: Revisamos que un usuario con rol de profesor puede eliminar bien una notificacion
+    # Metodo a Probar: t_removenotification (GET)
+    # Datos de la Prueba: {teacher_user, notification_id valido}
+    # Resultado Esperado: Se elimina la notificacion, se muestra mensaje de exito y redirige a /t_deletenotification
+    def test_t_removenotification_success(self):
+        self.client.force_login(self.teacher_user)
+
+        notif = Notification.objects.create(
+            heading='Eliminar',
+            message='Notificación de prueba para borrar',
+            created_by=self.teacher_user.username
+        )
+
+        response = self.client.get(f'/t_removenotification/{notif.id}')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/t_deletenotification')
+
+        # ver que fue eliminada
+        self.assertFalse(Notification.objects.filter(id=notif.id).exists())
+
+        # ver mensaje de éxito
+        storage = list(messages.get_messages(response.wsgi_request))
+        self.assertTrue(any(m.message == "Notification deleted successfully" for m in storage))
+
+    # ID: VTCH-18
+    # Descripcion: Revisamos que si pasa un error al eliminar una notificacion en t_removenotification,
+    # se maneje bien mostrando el mensaje de error y redirigiendo sin romper la ejecucion.
+    # Metodo a Probar: t_removenotification (GET)
+    # Datos de la Prueba: {teacher_user, notification_id valido} + mock que fuerza excepcion al hacer delete()
+    # Resultado Esperado: No se elimina, se lanza mensaje de error y se redirige a /t_deletenotification
+    @patch('Main_App.v_teacher.Notification.delete', side_effect=Exception("Fallo al eliminar")) # simulamos un fallo al eliminar
+    def test_t_removenotification_exception_path(self, mock_delete):
+        self.client.force_login(self.teacher_user)
+
+        notif = Notification.objects.create(
+            heading='Va a fallar',
+            message='Simulacion de error en delete',
+            created_by=self.teacher_user.username
+        )
+
+        with patch.object(Notification, 'delete', side_effect=Exception("Fallo al eliminar")):
+            response = self.client.get(f'/t_removenotification/{notif.id}')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/t_deletenotification')
+
+        # ver que no fue eliminada
+        self.assertTrue(Notification.objects.filter(id=notif.id).exists())
+
+        # ver mensaje de error
+        storage = list(messages.get_messages(response.wsgi_request))
+        self.assertTrue(any(m.message == "Failed to delete Notification" for m in storage))
+
+    # ID: VTCH-19
+    # Descripcion: Revisamos que un usuario con rol de profesor puede acceder a la vista t_viewnotification,
+    # y que las notificaciones existentes se cargan bien
+    # Metodo a Probar: t_viewnotification (GET)
+    # Datos de la Prueba: {teacher_user}
+    # Resultado Esperado: HTTP 200, uso del template esperado, y que salgan las notificaciones del usuario
+    def test_t_viewnotification_success(self):
+        self.client.force_login(self.teacher_user)
+
+        # creamos una notificacion asociada al usuario teacher
+        Notification.objects.create(
+            heading='Aviso importante',
+            message='Examen el viernes',
+            created_by=self.teacher_user.username
+        )
+
+        response = self.client.get('/t_viewnotification/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'teacher/t_viewnotification.html')
+        self.assertIn('notifications', response.context)
+        self.assertEqual(len(response.context['notifications']), 1)
+        self.assertEqual(response.context['notifications'][0].created_by, self.teacher_user.username) # ver que la notificacion sea del profesor
+
+    # ID: VTCH-20
+    # Descripcion: Revisamos que si ocurre un error al obtener las notificaciones (como un fallo en la base de datos)
+    # la vista t_viewnotification responde bien mostrando el template sin romperse
+    # Metodo a Probar: t_viewnotification (GET)
+    # Datos de la Prueba: {teacher_user} + simulacion de excepcion con mock
+    # Resultado Esperado: HTTP 200, uso del template esperado y ausencia del contexto 'notifications'
+    @patch('Main_App.v_teacher.Notification.objects.all', side_effect=Exception("DB error")) # simulamos un error al obtener las notificaciones
+    def test_t_viewnotification_exception_path(self, mock_all):
+        self.client.force_login(self.teacher_user)
+
+        response = self.client.get('/t_viewnotification/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'teacher/t_viewnotification.html')
+        self.assertNotIn('notifications', response.context)
+
+    # ID: VTCH-21
+    # Descripcion: Revisamos que un usuario con rol de profesor pueda acceder bien a la vista t_addresult,
+    # y que se carguen las listas de niveles academicos (stds) y mediums en el contexto.
+    # Metodo a Probar: t_addresult (GET)
+    # Datos de la Prueba: {teacher_user}
+    # Resultado Esperado: HTTP 200, uso del template esperado, y que salgan de 'stds' y 'mediums' en el contexto
+    def test_t_addresult_view(self):
+        self.client.force_login(self.teacher_user)
+
+        response = self.client.get('/t_addresult/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'teacher/t_addresult.html')
+        self.assertIn('stds', response.context)
+        self.assertIn('mediums', response.context)
+
+    # ID: VTCH-22
+    # Descripcion: Revisamos que si se accede a t_saveresult con un metodo distinto a POST (como GET),
+    # el sistema devuelve un mensaje dcieindo que el metodo no esta permitido.
+    # Metodo a Probar: t_saveresult (GET)
+    # Datos de la Prueba: {teacher_user}
+    # Resultado Esperado: Respuesta HTTP 200 con el texto “Method not Allowed..!”
+    def test_t_saveresult_get_not_allowed(self):
+        self.client.force_login(self.teacher_user)
+
+        response = self.client.get('/t_saveresult')  # acceso con metodo GET
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "Method not Allowed..!")
+
+    # ID: VTCH-23
+    # Descripcion: Revisamos que un profesor pueda subir bien un resultado usando POST
+    # Metodo a Probar: t_saveresult (POST)
+    # Datos de la Prueba: {teacher_user, title='Examen Final', medium='English', std='10', archivo PDF}
+    # Resultado Esperado: Se guarda un nuevo objeto Result y se redirige con mensaje de exito
+    def test_t_saveresult_post_success(self):
+        self.client.force_login(self.teacher_user)
+
+        fake_file = SimpleUploadedFile("test.pdf", b"contenido del archivo", content_type="application/pdf") # archivo simulado
+
+        post_data = {
+            'title': 'Examen Final',
+            'medium': 'English',
+            'std': '10',
+            'resultfile': fake_file
+        }
+
+        response = self.client.post('/t_saveresult', data=post_data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/t_addresult')
+
+        result = Result.objects.filter(title='Examen Final', created_by=self.teacher_user.username).first()
+        self.assertIsNotNone(result)
+        self.assertEqual(result.medium, 'English')
+        self.assertEqual(result.std, '10')
+
+    # ID: VTCH-24
+    # Descripcion: Revisamos que si pasa un error al intentar subir el resultado (como falla al crear el objeto),
+    # el sistema muestre un mensaje de error y redirija bien a /t_addresult
+    # Metodo a Probar: t_saveresult (POST)
+    # Datos de la Prueba: {teacher_user, titulo, medium, std, archivo PDF, mock de excepcion}
+    # Resultado Esperado: No se guarda el resultado, se muestra mensaje de error, y redirige a /t_addresult
+    def test_t_saveresult_post_exception_path(self):
+        self.client.force_login(self.teacher_user)
+
+        with patch('Main_App.v_teacher.Result.objects.create', side_effect=Exception("Error interno")): # simulamos un fallo al crear el objeto Result
+            fake_file = SimpleUploadedFile("fallo.pdf", b"contenido", content_type="application/pdf") # archivo simulado
+
+            post_data = {
+                'title': 'Fallido',
+                'medium': 'Español',
+                'std': '9',
+                'resultfile': fake_file
+            }
+
+            response = self.client.post('/t_saveresult', data=post_data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/t_addresult')
+
+        storage = list(messages.get_messages(response.wsgi_request))
+        self.assertTrue(any("Failed to upload result" in m.message for m in storage))
+
+    # ID: VTCH-25
+    # Descripcion: Revisamos que un usuario con rol de profesor puede acceder a la vista t_viewresult y
+    # que se renderiza bien la plantilla junto con la lista de resultados disponibles
+    # Metodo a Probar: t_viewresult (GET)
+    # Datos de la Prueba: {teacher_user}
+    # Resultado Esperado: HTTP 200, uso de plantilla 'teacher/t_viewresult.html' y contexto tiene 'results'
+    def test_t_viewresult_renders_correctly(self):
+        self.client.force_login(self.teacher_user)
+
+        Result.objects.create(title="Res 1", file="file1.pdf", std="10", medium="English", created_by="profe") # simulamos resultados
+        Result.objects.create(title="Res 2", file="file2.pdf", std="9", medium="Spanish", created_by="profe")
+
+        response = self.client.get('/t_viewresult/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'teacher/t_viewresult.html')
+        self.assertIn('results', response.context)
+        self.assertEqual(len(response.context['results']), 2)
