@@ -437,10 +437,10 @@ def a_savenotes(request):
             note.save()
             
             messages.success(request,"Notes uploaded successfully")
-            return HttpResponseRedirect("/a_addnotes")
+            return HttpResponseRedirect("/a_addnotes/")
         except :
             messages.error(request,"Failed to upload notes")
-            return HttpResponseRedirect("/a_addnotes")
+            return HttpResponseRedirect("/a_addnotes/")
 
 @is_authenticated
 @is_admin
