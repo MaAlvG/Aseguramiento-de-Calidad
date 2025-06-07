@@ -7,7 +7,6 @@ from Main_App.restrictions import is_authenticated, is_admin, is_teacher, is_stu
 
 
 class RestrictionsTestCase(TestCase):
-    # Configuracion de Pruebas
     def setUp(self):
         self.factory = RequestFactory()
         
@@ -30,7 +29,6 @@ class RestrictionsTestCase(TestCase):
             user_type='3'
         )
         
-        # Funcion mock para pruebas
         def dummy_view(request):
             return HttpResponse("Success")
         

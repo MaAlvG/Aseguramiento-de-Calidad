@@ -1,6 +1,6 @@
 from django.test import TestCase
 from Main_App.models import MyUser, Admin, Teacher, Student
-
+from time import sleep
 class ModelsTests(TestCase):
     
     # ID: M-01
@@ -40,9 +40,8 @@ class ModelsTests(TestCase):
         admin_instance = user.admin
         old_updated_at = admin_instance.updated_at
 
-        # Modificar algo para que se note el efecto del save
+        sleep(1)
         user.save()
 
-        # Volver a cargar de DB
         admin_instance.refresh_from_db()
         self.assertNotEqual(admin_instance.updated_at, old_updated_at)

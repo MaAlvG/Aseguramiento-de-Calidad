@@ -9,7 +9,7 @@ from Main_App.models import Notification # para pruebas de notificaciones
 from django.core.files.uploadedfile import SimpleUploadedFile
 from Main_App.models import Result
 from Main_App.models import Notes
-
+from unittest.mock import patch
 
 
 class TeacherViewTests(TestCase):
@@ -557,7 +557,38 @@ class TeacherViewTests(TestCase):
         self.assertRedirects(response, reverse('t_deleteresult'))
         self.assertFalse(Result.objects.filter(id=result.id).exists())
 
+    
     # ID: VTCH-29
+    # Descripción: Verifica la ocurrencia de un error a la hora de intentar eliminar un resultado a traver de t_removeresult
+    # Método a Probar: excepcion en t_removeresult (GET) 
+    # Datos de la Prueba: {teacher_user, resultado creado}
+    # Resultado Esperado: redirección a '/t_deleteresult' y mensaje de fallo
+    def test_t_removeresult_deletes_result_error(self):
+        self.client.force_login(self.teacher_user)
+
+        result = Result.objects.create(
+            title="Test Result",
+            file="dummy.pdf",
+            std="10",
+            medium="CBSE",
+            created_by=self.teacher_user.username
+        )
+
+        with patch.object(Result, 'delete', side_effect=Exception("Error simulado")):
+            response = self.client.get(reverse('t_removeresult', args=[result.id]))
+
+        self.assertRedirects(response, reverse('t_deleteresult'))
+
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(
+            any("Failed to delete result" in str(m.message) for m in messages)
+        )
+    
+    # ID: VTCH-30
+    # Descripción: Verificamos que un usuario con rol de profesor pueda acceder a la vista t_addnotes
+    # Método a Probar: t_addnotes (GET)
+    # Datos de la Prueba: {self.client}
+    # Resultado Esperado: HTTP 200, uso de plantilla 'teacher/t_addnotes.html' y contexto contiene 'notes'
     def test_t_addnotes_view(self):
         self.client.force_login(self.teacher_user)
 
@@ -569,7 +600,11 @@ class TeacherViewTests(TestCase):
         self.assertIn('mediums', response.context)
 
 
-    # ID: VTCH-30
+    # ID: VTCH-31
+    # Descripción: Verificamos que un usuario con rol de profesor pueda guardar un registro de notass
+    # Método a Probar: t_savenotes (GET)
+    # Datos de la Prueba: {post_data}
+    # Resultado Esperado: El registro de notas existe, y se puede acceder a su informacion
     def test_t_savenotes_post_success(self):
         self.client.force_login(self.teacher_user)
 
@@ -579,7 +614,7 @@ class TeacherViewTests(TestCase):
             'title': 'Notas Examen Final',
             'medium': 'English',
             'std': '10',
-            'notes': fake_notes  # nombre correcto del campo
+            'notes': fake_notes  
         }
 
         response = self.client.post('/t_savenotes', data=post_data)
@@ -592,7 +627,32 @@ class TeacherViewTests(TestCase):
         self.assertEqual(note.medium, 'English')
         self.assertEqual(note.std, '10')
 
-    # ID: VTCH-31
+    # ID: VTCH-32
+    # Descripción: Verificar la ocurrencia de un error al intentar guardar un registro de notas desde t_savenotes
+    # Método a Probar: excepcion en t_savenotes (GET)
+    # Datos de la Prueba: {post_data}
+    # Resultado Esperado: codigo de erspuesta 302, y un mensaje de error
+    def test_t_savenotes_exception(self):
+        self.client.force_login(self.teacher_user)
+
+        fake_notes = SimpleUploadedFile("testNotes.pdf", b"contenido", content_type="application/pdf")
+
+        post_data = {
+            'title': 'Notas Error',
+            'medium': 'English',
+            'std': '10',
+            'notes': fake_notes
+        }
+
+        with patch('Main_App.models.Notes.objects.create', side_effect=Exception("Simulated error")):
+            response = self.client.post(reverse('t_savenotes'), data=post_data)
+
+        self.assertEqual(response.status_code, 302)
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any("Failed to upload Notes" in str(m.message) for m in messages))
+
+    
+    # ID: VTCH-33
     # Descripción: Verificamos que un usuario con rol de profesor pueda acceder a la vista t_deletenotes,
     # y que la plantilla se renderice correctamente con las notas creadas por ese usuario.
     # Método a Probar: t_deletenotes (GET)
@@ -601,7 +661,6 @@ class TeacherViewTests(TestCase):
     def test_t_deletenotes_succes(self):
         self.client.force_login(self.teacher_user)
 
-        # Crear notas simuladas
         Notes.objects.create(
             title="Nota 1",
             file=SimpleUploadedFile("nota1.pdf", b"contenido", content_type="application/pdf"),
@@ -625,9 +684,26 @@ class TeacherViewTests(TestCase):
         self.assertIn('notes', response.context)
         self.assertEqual(len(response.context['notes']), 2)
 
-    # ID: VTCH-32
+    # ID: VTCH-34
+    # Descripción: Verificar una excepcion a la hora de accedera la vista t_deletenotes
+    # Método a Probar: excepcion en t_deletenotes (GET)
+    # Datos de la Prueba: {teacher_user}
+    # Resultado Esperado: HTTP 200, uso de plantilla 'teacher/t_deletenotes.html' pero un pantalla sin mostrar ningun registro de notas
+    def test_t_deletenotes_exception(self):
+        self.client.force_login(self.teacher_user)
+
+        with patch('Main_App.models.Notes.objects.filter', side_effect=Exception("Simulated error")):
+            response = self.client.get(reverse('t_deletenotes'))
+
+        self.assertTemplateUsed(response, 'teacher/t_deletenotes.html')
+        self.assertEqual(response.status_code, 200)
+
+    # ID: VTCH-35
+    # Descripción: Verificar la eliminacion de un registro de notas por parte de un profesor
+    # Método a Probar: t_removenotes (POST)
+    # Datos de la Prueba: {notesr}
+    # Resultado Esperado: Redireccionamiento a l pagina 't_deletenotes' y verificar que las notas ya no existen
     def test_t_removenotes_succes(self):
-        # Crear notas simuladas
         self.client.force_login(self.teacher_user)
         notes =Notes.objects.create(
             title="Nota 1",
@@ -643,7 +719,7 @@ class TeacherViewTests(TestCase):
         self.assertFalse(Notes.objects.filter(id=notes.id).exists())
 
 
-    # ID: VTCH-33
+    # ID: VTCH-36
     # Descripción: Verificamos que un usuario con rol de profesor pueda acceder a la vista t_viewnotes
     # y que la plantilla 'teacher/t_viewnotes.html' se renderice correctamente con las notas disponibles
     # Método a Probar: t_viewnotes (GET)
@@ -653,7 +729,6 @@ class TeacherViewTests(TestCase):
     def test_t_viewnotes_renders_correctly(self):
         self.client.force_login(self.teacher_user)
 
-        # Crear algunas notas simuladas
         Notes.objects.create(
             title="Nota 1",
             file=SimpleUploadedFile("nota1.pdf", b"contenido 1", content_type="application/pdf"),

@@ -11,7 +11,6 @@ User = get_user_model()
 
 class ViewsTests(TestCase):
     def setUp(self):
-        # Crear usuarios de prueba para cada tipo
         self.admin_user = User.objects.create_user(
             username='admin@example.com',
             email='admin@example.com',
@@ -104,11 +103,9 @@ class ViewsTests(TestCase):
     # Resultado Esperado: HTTP 302 y el usuario deja de estar autenticado
     def test_logoutuser_redirects_and_logs_out(self):
         response = self.client.get('/logoutuser')
-        # Verificar redirección a '/'
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/')
 
-        # Verificar que el usuario ya no está autenticado
         response_after_logout = self.client.get('/')
         user = response_after_logout.wsgi_request.user
         self.assertFalse(user.is_authenticated)
