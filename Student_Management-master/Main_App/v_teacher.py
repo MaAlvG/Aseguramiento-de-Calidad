@@ -164,11 +164,12 @@ def t_resetspass(request,student_id):
     try:
         user = MyUser.objects.get(id=student_id)
         user.set_password("Student@100")
+        user.save() 
         messages.success(request,"Password reset successfully to Student@100")
-        return HttpResponseRedirect("/t_viewstudent")
+        return HttpResponseRedirect("/t_viewstudent/")
     except :
         messages.error(request,"Failed to reset password")
-        return HttpResponseRedirect("/t_viewstudent")
+        return HttpResponseRedirect("/t_viewstudent/")
 
 @is_authenticated
 @is_teacher
@@ -272,10 +273,10 @@ def t_removeresult(request,result_id):
         result.file.delete()
         result.delete()
         messages.success(request,"result deleted successfully")
-        return HttpResponseRedirect("/t_deleteresult")
+        return HttpResponseRedirect("/t_deleteresult/")
     except :
         messages.error(request,"Failed to delete result")
-        return HttpResponseRedirect("/t_deleteresult")
+        return HttpResponseRedirect("/t_deleteresult/")
 
 @is_authenticated
 @is_teacher
@@ -329,10 +330,10 @@ def t_removenotes(request,notes_id):
         notes.file.delete()
         notes.delete()
         messages.success(request,"Note deleted successfully")
-        return HttpResponseRedirect("/t_deletenotes")
+        return HttpResponseRedirect("/t_deletenotes/")
     except :
         messages.error(request,"Failed to delete Note")
-        return HttpResponseRedirect("/t_deletenotes")
+        return HttpResponseRedirect("/t_deletenotes/")
 
 @is_authenticated
 @is_teacher
