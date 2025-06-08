@@ -39,7 +39,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: a_home (GET)
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: El sistema permite el acceso a la vista, devuelve HTTP 200.
-    def test_a_home_status_code_and_context(self):
+    def test_a_home(self):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('adminhome')) 
 
@@ -67,7 +67,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: addteacher (GET)
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: Se devuelve un 200 y se dirige a la vista correspondiente con la variable 'genders' en el contexto
-    def test_addteacher_view_get(self):
+    def test_addteacher(self):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('addteacher')) 
 
@@ -81,7 +81,7 @@ class AdminViewTestCase(TestCase):
     # Datos de la Prueba: {firstname, lastname, email, address, gender}
     # Resultado Esperado: Se crea un nuevo usuario y un objeto Teacher, se muestra un mensaje de exito y se redirige a /addteacher
 
-    def test_saveteacher_post_success(self):
+    def test_saveteacher_success(self):
         self.client.force_login(self.admin_user)
 
         post_data = {
@@ -156,7 +156,7 @@ class AdminViewTestCase(TestCase):
     # Datos de la Prueba: {teacher_user.id}
     # Resultado Esperado: Se devuelve un 200 y se dirige a a_editteacher.html con el objeto Teacher en el contexto.
 
-    def test_editteacher_view_success(self):
+    def test_editteacher_success(self):
         self.client.force_login(self.admin_user)
 
         teacher_id = self.teacher_user.id
@@ -262,7 +262,7 @@ class AdminViewTestCase(TestCase):
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: El sistema permite el acceso a la vista, devuelve HTTP 200
 
-    def test_a_addnotification_view_get(self):
+    def test_addnotification(self):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('a_addnotification'))
         
@@ -274,7 +274,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: a_savenotification (POST)
     # Datos de la Prueba: {admin_user, heading="Hola", message="Hola mundo"}
     # Resultado Esperado: Se crea una nueva instancia de Notification, se guarda correctamente y se muestra un mensaje de exito
-    def test_a_savenotification_post_success(self):
+    def test_savenotification_success(self):
             self.client.force_login(self.admin_user)
 
             post_data = {
@@ -301,7 +301,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a probar: a_savenotification (GET)
     # Datos de prueba: Solicitud GET autenticada por un usuario administrador
     # Resultado esperado: Codigo  html 200 y el  mensaje "Method not Allowed..!" 
-    def test_a_savenotification_get_not_allowed(self):
+    def test_savenotification__not_allowed(self):
         self.client.force_login(self.admin_user)
         response = self.client.get('/a_savenotification')
         self.assertEqual(response.status_code, 200)
@@ -313,7 +313,7 @@ class AdminViewTestCase(TestCase):
     # Datos de prueba: Notificación creada previamente
     # Resultado esperado: La notificacion es eliminada y se redirige a /managenotification (HTTP 302)
 
-    def test_a_deletenotification_success(self):
+    def test_deletenotification_success(self):
         self.client.force_login(self.admin_user)
 
         notification = Notification.objects.create(
@@ -336,7 +336,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a probar: a_addresult (GET)
     # Resultado esperado: Se carga el template con los datos de std_choices y medium_choices (HTTP 200)
 
-    def test_a_addresult_get_success(self):
+    def test_addresult_success(self):
         self.client.force_login(self.admin_user)
 
         response = self.client.get('/a_addresult/')
@@ -355,7 +355,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: a_saveresult (POST)
     # Datos de la Prueba: {admin_user, title='Examen Final', medium='English', std='10th', resultfile=archivo_pdf}
     # Resultado Esperado: Se crea un registro en Result y  se añade el mensaje de exito
-    def test_a_saveresult_post_success(self):
+    def test_saveresult_success(self):
         self.client.force_login(self.admin_user)
 
         # Simula un archivo subido
@@ -370,7 +370,6 @@ class AdminViewTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/a_addresult')
 
-
         result = Result.objects.filter(title='Examen Final', created_by=self.admin_user.username).first()
         self.assertIsNotNone(result)
         self.assertEqual(result.medium, 'English')
@@ -384,14 +383,13 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: a_viewresult (GET)
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: HTTP 200
-    def test_a_viewresult_renders_correctly(self):
+    def test_viewresult_success(self):
         self.client.force_login(self.admin_user)
 
         Result.objects.create(title="Res 1", file="file1.pdf", std="10", medium="English", created_by="admin")
         Result.objects.create(title="Res 2", file="file2.pdf", std="9", medium="Spanish", created_by="admin")
 
         response = self.client.get('/a_viewresult/')
-
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'admin/a_viewresult.html')
         self.assertIn('results', response.context)
@@ -402,7 +400,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: a_addnotes (GET)
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: Codigo HTTP 200 
-    def test_a_addnotes_get_success(self):
+    def test_addnotes_success(self):
         self.client.force_login(self.admin_user)
 
         response = self.client.get(reverse('a_addnotes'))
@@ -419,11 +417,10 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: a_savenotes (POST)
     # Datos de la Prueba: {admin_user, archivo válido}
     # Resultado Esperado: Redirección a /a_addnotes/, y creacion del objeto Notes con los datos enviados.
-    def test_a_savenotes_post_success(self):
+    def test_savenotes_success(self):
         self.client.force_login(self.admin_user)
-
         fake_notes = SimpleUploadedFile("testNotes.pdf", b"contenido del archivo", content_type="application/pdf")
-
+        #datos de prueba
         post_data = {
             'title': 'Notas Examen Final Admin',
             'medium': 'English',
@@ -447,10 +444,9 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: manageteacher (GET)
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: El sistema permite el acceso a la vista y devuelve HTTP 200
-    def test_manageteacher_access(self):
+    def test_manageteacher(self):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('manageteacher')) 
-
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'admin/a_manageteacher.html')
         self.assertIn('teachers', response.context)
@@ -460,10 +456,9 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: addstudent (GET)
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: El sistema permite el acceso a la vista y devuelve HTTP 200
-    def test_addstudent_access(self):
+    def test_addstudent(self):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('addstudent')) 
-
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'admin/a_addstudent.html')
         self.assertIn('genders', response.context)
@@ -475,7 +470,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: managestudent (GET)
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: El sistema permite el acceso a la vista y  devuelve HTTP 200
-    def test_managestudent_access(self):
+    def test_managestudent(self):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('managestudent'))  
         self.assertEqual(response.status_code, 200)
@@ -487,7 +482,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: managenotification (GET)
     # Datos de la Prueba: {admin_user}
     # Resultado Esperado: El sistema permite el acceso a la vista y devuelve HTTP 200
-    def test_managenotification_access(self):
+    def test_managenotification(self):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('managenotification')) 
         self.assertEqual(response.status_code, 200)
@@ -499,7 +494,7 @@ class AdminViewTestCase(TestCase):
     # Metodo a Probar: a_viewnotes (GET)
     # Datos de la Prueba: {admin_user autenticado}
     # Resultado Esperado: El sistema devuelve HTTP 200
-    def test_a_viewnotes_access(self):
+    def test_viewnotes(self):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('a_viewnotes')) 
         self.assertEqual(response.status_code, 200)
