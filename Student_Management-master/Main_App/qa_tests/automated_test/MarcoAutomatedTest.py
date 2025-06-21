@@ -13,23 +13,25 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, WebDriverException
+from webdriver_manager.chrome import ChromeDriverManager
 
 class DjangoSeleniumTestCase(unittest.TestCase):
     """
     Clase base para todas las pruebas de Selenium
-    Cada clase de prueba heredará de esta y tendrá su propio ciclo de vida
+    Cada clase de prueba heredara de esta y tendra su propio ciclo de vida
     """
     
     @classmethod
     def setUpClass(cls):
         """
-        Configuración que se ejecuta una vez antes de todas las pruebas de esta clase
+        Configuracion que se ejecuta una vez antes de todas las pruebas de esta clase
         """
         print(f"\n=== Configurando {cls.__name__} ===")
         
         # Configurar opciones del navegador
         cls.chrome_options = Options()
-        cls.chrome_options.add_argument('--headless')
+        
+        cls.chrome_options.add_argument('--headless') #para NO ver las ejecuciones en tiempo real.
         cls.chrome_options.add_argument('--no-sandbox')
         cls.chrome_options.add_argument('--disable-dev-shm-usage')
         cls.chrome_options.add_argument('--disable-gpu')
@@ -41,13 +43,14 @@ class DjangoSeleniumTestCase(unittest.TestCase):
         cls.chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
         cls.chrome_options.add_experimental_option('useAutomationExtension', False)
         
+        
         # URL base del servidor Django
         cls.live_server_url = 'http://127.0.0.1:8000'
         cls.server_process = None
         cls.server_started_by_us = False
         
         try:
-            # Verificar si el servidor ya está corriendo
+            # Verificar si el servidor ya esta corriendo
             if not cls.is_server_running():
                 print("Iniciando servidor Django...")
                 cls.start_django_server()
@@ -76,7 +79,9 @@ class DjangoSeleniumTestCase(unittest.TestCase):
         """
         print(f"  → Iniciando: {self._testMethodName}")
         try:
-            self.driver = webdriver.Chrome(options=self.chrome_options)
+            # Usar webdriver-manager para obtener el ChromeDriver compatible
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=self.chrome_options)
             self.driver.set_page_load_timeout(30)
             self.driver.implicitly_wait(10)
         except WebDriverException as e:
@@ -194,7 +199,6 @@ class DjangoSeleniumTestCase(unittest.TestCase):
         except Exception as e:
             print(f"    Error al navegar a {url}: {e}")
             raise
-
 # SM-76
 class upload_result_no_file(DjangoSeleniumTestCase):    
     """
