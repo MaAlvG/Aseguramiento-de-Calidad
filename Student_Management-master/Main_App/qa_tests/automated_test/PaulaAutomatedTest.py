@@ -196,20 +196,338 @@ class DjangoSeleniumTestCase(unittest.TestCase):
             print(f"    Error al navegar a {url}: {e}")
             raise
 
-#SM-52 (Prueba 1)
+#SM-42
+class add_student_alfanumeric_lastName(DjangoSeleniumTestCase):
+    """
+    SM-42
+    Intentar añadir un nuevo profesor sin ningún dato incorporado
+    Datos:
+        - Usuario: admin@pruebas.com/pruebas
+        - Email address = {“carl@test.com”}
+        - First Name = {“Carl”}
+        - Last Name = {“Morera72”}
+        - Medium = {“SemiEng”}
+        - Class = {“1”}
+        - Gender = {“Male”}
+        - Address = {“Isla Tortuga, Limón”}
+
+    Resultado esperado:
+        - La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student Added Successfully”
+            En la ventana de “Admin Dashboard” deberá aparecer un estudiante nuevo en los datos.
+    """
+    def test_add_student_with_alfanumeric_lastname(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        driver.find_element(By.XPATH, '//*[@id="sidebar"]/div/div[1]/div[2]/div/div/div/ul/li[4]/a').click()
+
+        driver.find_element(By.XPATH, '//*[@id="add"]/li[1]/a').click()
+
+        title = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/h1'))
+        )
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[1]/input').send_keys('carl@test.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[2]/input').send_keys('Carl')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[3]/input').send_keys('Morela72')
+
+        driver.find_element(By.XPATH, '//*[@id="medium"]').click()
+        driver.find_element(By.XPATH, '//*[@id="medium"]/option[3]').click()
+
+        driver.find_element(By.XPATH, '//*[@id="std"]').click()
+        driver.find_element(By.XPATH, '//*[@id="std"]/option[7]').click()
+
+        driver.find_element(By.XPATH, '//*[@id="gender"]').click()
+        driver.find_element(By.XPATH, '//*[@id="gender"]/option[2]').click()
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[7]/input').send_keys('Isla Tortuga, Limón')
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[8]/button').click()
+        
+        added = driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div[1]/div[2]/strong')
+
+        self.assertEqual(added.text, "Student added successfully")
+
+#SM-43
+class add_teacher_no_data(DjangoSeleniumTestCase):
+    """
+    SM-43
+    Intentar añadir un nuevo profesor sin ningún dato incorporado   
+    Datos:
+        Usuario: admin@pruebas.com / pruebas
+    Resultado esperado:
+        - Debe saltar un mensaje en “Email address” indicando “Please fill out this field”
+    """
+    def test_add_teacher_with_no_data(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        driver.find_element(By.XPATH, '//*[@id="sidebar"]/div/div[1]/div[2]/div/div/div/ul/li[4]/a').click()
+
+        driver.find_element(By.XPATH, '//*[@id="add"]/li[2]/a').click()
+
+        title = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/h1'))
+        )
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[6]/button').click()
+        
+        try:
+            alert = WebDriverWait(driver, 3).until(
+                EC.visibility_of_element_located((By.CLASS_NAME, "alert-message"))
+            )
+            # Verificar el contenido del mensaje
+            alert_text = alert.text.strip()
+            self.assertNotIn("Student added successfully", alert_text,
+                             "El maestro no debería haberse creado exitosamente sin datos")
+        except TimeoutException:
+            # Si no aparece mensaje, eso tambien es valido
+            pass
+
+#SM-44
+class add_teacher_success(DjangoSeleniumTestCase):
+    """
+    SM-44
+    Intentar añadir un profesor correctamente  
+    Datos:
+        - Usuario: admin@pruebas.com / pruebas
+        - Email address = {samuel@test.com}
+        - First Name = {Samuel}
+        - Last Name = {Duarte}
+        - Gender = {Male}
+        - Address = {Poas, Alajuela}
+    Resultado esperado:
+La ventana de “Add Teacher” se limpiara y tendrá un mensaje en celeste indicando “Teacher  added successfully”
+    """
+    def test_add_teacher(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        driver.find_element(By.XPATH, '//*[@id="sidebar"]/div/div[1]/div[2]/div/div/div/ul/li[4]/a').click()
+
+        driver.find_element(By.XPATH, '//*[@id="add"]/li[2]/a').click()
+
+        title = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/h1'))
+        )
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[1]/input').send_keys('samuel@test.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[2]/input').send_keys('Samuel')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[3]/input').send_keys('Duarte')
+
+        driver.find_element(By.XPATH, '//*[@id="gender"]').click()
+        driver.find_element(By.XPATH, '//*[@id="gender"]/option[2]').click()
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[5]/input').send_keys('Poas, Alajuela')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[6]/button').click()
+        
+        added = driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div[1]/div[2]/strong')
+
+        self.assertEqual(added.text, "Teacher added successfully")
+
+
+#SM-46
+class add_teacher_no_email(DjangoSeleniumTestCase):
+    """
+    SM-46
+    Intentar añadir un profesor sin un “Email Address”
+    Datos:
+        - Usuario: admin@pruebas.com / pruebas
+        - First Name = {Samuel}
+        - Last Name = {Duarte}
+        - Gender = {Male}
+        - Address = {Poas, Alajuela}
+    Resultado esperado:
+        Debe saltar un mensaje en “Email address” indicando “Please fill out this field”
+    """
+    def test_add_teacher(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        driver.find_element(By.XPATH, '//*[@id="sidebar"]/div/div[1]/div[2]/div/div/div/ul/li[4]/a').click()
+
+        driver.find_element(By.XPATH, '//*[@id="add"]/li[2]/a').click()
+
+        title = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/h1'))
+        )
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[2]/input').send_keys('Samuel')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[3]/input').send_keys('Duarte')
+
+        driver.find_element(By.XPATH, '//*[@id="gender"]').click()
+        driver.find_element(By.XPATH, '//*[@id="gender"]/option[2]').click()
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[5]/input').send_keys('Poas, Alajuela')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[6]/button').click()
+        
+    
+        try:
+            alert = WebDriverWait(driver, 3).until(
+                EC.visibility_of_element_located((By.CLASS_NAME, "alert-message"))
+            )
+            # Verificar el contenido del mensaje
+            alert_text = alert.text.strip()
+            self.assertNotIn("Teacher added successfully", alert_text,
+                             "El profesor no se deberia de añadir sin email")
+        except TimeoutException:
+            # Si no aparece mensaje, eso tambien es valido
+            pass        
+
+#SM-47
+class add_teacher_no_name(DjangoSeleniumTestCase):
+    """
+    SM-47
+    Intentar añadir un profesor sin un “First Name”
+    Datos:
+        - Usuario: admin@pruebas.com / pruebas
+        - Email address = {samuel@test.com}
+        - Last Name = {Duarte}
+        - Gender = {Male}
+        - Address = {Poas, Alajuela}
+    Resultado esperado:
+        Debe saltar un mensaje en “First name” indicando “Please fill out this field”
+    """
+    def test_add_teacher_no_name(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        driver.find_element(By.XPATH, '//*[@id="sidebar"]/div/div[1]/div[2]/div/div/div/ul/li[4]/a').click()
+
+        driver.find_element(By.XPATH, '//*[@id="add"]/li[2]/a').click()
+
+        title = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/h1'))
+        )
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[1]/input').send_keys('samuel@test.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[3]/input').send_keys('Duarte')
+
+        driver.find_element(By.XPATH, '//*[@id="gender"]').click()
+        driver.find_element(By.XPATH, '//*[@id="gender"]/option[2]').click()
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[5]/input').send_keys('Poas, Alajuela')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[6]/button').click()
+        
+        
+
+        try:
+            alert = WebDriverWait(driver, 3).until(
+                EC.visibility_of_element_located((By.CLASS_NAME, "alert-message"))
+            )
+            # Verificar el contenido del mensaje
+            alert_text = alert.text.strip()
+            self.assertNotIn("Teacher added successfully", alert_text,
+                             "El profesor no se deberia de añadir sin email")
+        except TimeoutException:
+            # Si no aparece mensaje, eso tambien es valido
+            pass        
+
+#SM-48
+class add_teacher_no_lastname(DjangoSeleniumTestCase):
+    """
+    SM-48
+    Intentar añadir un profesor sin un “Last Name”
+    Datos:
+        - Usuario: admin@pruebas.com / pruebas
+        - Email address = {samuel@test.com}
+        - Fist Name = {Samuel}
+        - Gender = {Male}
+        - Address = {Poas, Alajuela}
+    Resultado esperado:
+        Debe saltar un mensaje en “First name” indicando “Please fill out this field”
+    """
+    def test_add_teacher_no_lastname(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        driver.find_element(By.XPATH, '//*[@id="sidebar"]/div/div[1]/div[2]/div/div/div/ul/li[4]/a').click()
+
+        driver.find_element(By.XPATH, '//*[@id="add"]/li[2]/a').click()
+
+        title = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/h1'))
+        )
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[1]/input').send_keys('samuel@test.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[2]/input').send_keys('Samuel')
+
+        driver.find_element(By.XPATH, '//*[@id="gender"]').click()
+        driver.find_element(By.XPATH, '//*[@id="gender"]/option[2]').click()
+
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[5]/input').send_keys('Poas, Alajuela')
+        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div/div/div/div/form/div[6]/button').click()
+
+        try:
+            alert = WebDriverWait(driver, 3).until(
+                EC.visibility_of_element_located((By.CLASS_NAME, "alert-message"))
+            )
+            # Verificar el contenido del mensaje
+            alert_text = alert.text.strip()
+            self.assertNotIn("Teacher added successfully", alert_text,
+                             "El profesor no se deberia de añadir sin email")
+        except TimeoutException:
+            # Si no aparece mensaje, eso tambien es valido
+            pass 
+
+#SM-52 
 class upload_note_no_file(DjangoSeleniumTestCase):    
     """
     SM-52
-
     Añadir material de estudio en el apartado de notas, sin seleccionar un material de estudio
-
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Title = {“Tarea 2”}
         - Medium = {“SemiEng”}
         - Class = {3}
-
-
     Resultado esperado:
         - Se va a mostrar una notificación indicando que es necesario seleccionar un archivo
     """
@@ -257,19 +575,15 @@ class upload_note_no_file(DjangoSeleniumTestCase):
             # Si no aparece mensaje, eso tambien es valido
             pass
 
-#SM-54 (Prueba 2)
+#SM-54
 class upload_note_no_tittle(DjangoSeleniumTestCase):    
     """
     SM-54
-
     Añadir un material de estudio en el apartado de notas sin haberle ingresado un título 
-
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Medium = {“SemiEng”}
         - Class = {3}
-
-
     Resultado esperado:
         - Se va a mostrar una notificación indicando que es necesario seleccionar un medio
     """
@@ -312,18 +626,15 @@ class upload_note_no_tittle(DjangoSeleniumTestCase):
             # Si no aparece mensaje, eso tambien es valido
             pass
 
-#SM-55 (Prueba 3)
+#SM-55 
 class upload_note_no_class(DjangoSeleniumTestCase):    
     """
     SM-55
-
     Añadir un material de estudio en el apartado de notas sin seleccionar una clase
-
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Title = {“Tarea1”}
         - Medium = {“SemiEng”}
-
     Resultado esperado:
         - Se va a mostrar una notificación indicando que es necesario seleccionar una clase
     """
@@ -370,13 +681,11 @@ class upload_note_no_class(DjangoSeleniumTestCase):
             # Si no aparece mensaje, eso tambien es valido
             pass
 
-#SM-56 (Prueba 4)
+#SM-56
 class upload_note_no_medium(DjangoSeleniumTestCase):    
     """
     SM-54
-
     Añadir un material de estudio en el apartado de notas sin seleccionar un medio
-
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Title = {“Tarea1”}
@@ -426,19 +735,15 @@ class upload_note_no_medium(DjangoSeleniumTestCase):
             # Si no aparece mensaje, eso tambien es valido
             pass
 
-#SM-59 (Prueba 5)
+#SM-59 
 class upload_notification(DjangoSeleniumTestCase):    
     """
     SM-59
-
-   Añadir una notificación desde el rol de profesor
-
+    Añadir una notificación desde el rol de profesor
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Notification heading = {Clase cancelada}
         - Notification message = {La clase ha sido cancelada debido a motivos personales}
-
-
     Resultado esperado:
         - Se va a mostrar una notificación indicando que la notificacion se creo con exito
     """
@@ -481,20 +786,15 @@ class upload_notification(DjangoSeleniumTestCase):
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div/div/div[1]/div[2]'))
         )
         self.assertEqual(alert_message.text, 'Notification added successfully')
-        
-
-#SM-60 (Prueba 6)
+    
+#SM-60
 class upload_notification_no_tittle(DjangoSeleniumTestCase):    
     """
     SM-60
-
-   Añadir una notificación dejando el encabezado en blanco 
-
+    Añadir una notificación dejando el encabezado en blanco 
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Notification message = {La clase ha sido cancelada debido a motivos personales}
-
-
     Resultado esperado:
         - Se va a mostrar una notificación indicando que se debe de completar el titulo de la notificacion
     """
@@ -536,18 +836,14 @@ class upload_notification_no_tittle(DjangoSeleniumTestCase):
         except TimeoutException:
             # Si no aparece mensaje, eso tambien es valido
             pass        
-
-#SM-61 (Prueba 7)
+#SM-61 
 class upload_notification_no_body(DjangoSeleniumTestCase):    
     """
     SM-61
-
-   Añadir una notificación dejando en cuerpo de la notificación vacío  
-
+    Añadir una notificación dejando en cuerpo de la notificación vacío  
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Notification heading = {Clase cancelada}
-
     Resultado esperado:
         - Se va a mostrar una notificación indicando que se debe de completar el cuerpo de la notificacion
     """
@@ -589,19 +885,15 @@ class upload_notification_no_body(DjangoSeleniumTestCase):
             # Si no aparece mensaje, eso tambien es valido
             pass        
 
-#SM-62 (Prueba 8)
+#SM-62
 class upload_notification_tittle_lenght(DjangoSeleniumTestCase):    
     """
     SM-62
-
-   Añadir una notificación con un encabezado  con tenido menor a 15 caracteres  
-
+    Añadir una notificación con un encabezado  con tenido menor a 15 caracteres  
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Notification heading = {Feriado}
         - Notification message = {Mañana es feriado}
-
-
     Resultado esperado:
         - Se va a mostrar una notificación indicando que el encabezado de la notificacion debe de 
         tener una longitud mayor a 15 caracteres
@@ -651,20 +943,15 @@ class upload_notification_tittle_lenght(DjangoSeleniumTestCase):
             # Si no aparece mensaje, eso tambien es valido
             pass        
 
-#SM-63 (Prueba 9)
+#SM-63 
 class upload_notification_body_lenght(DjangoSeleniumTestCase):    
     """
     SM-63
-
-   Añadir una notificación con un encabezado  con tenido menor a 15 caracteres  
-
+    Añadir una notificación con un encabezado  con tenido menor a 15 caracteres  
     Datos:
         - User: profesor@pruebas.com / Teacher@100
         - Notification heading = {Clase Cancelada}
         - Notification message = {Mañana es feriado}
-
-
-
     Resultado esperado:
         - Se va a mostrar una notificación mensaje indicando que el cuerpo de la notificación debe de tener una longitud mínima de 30 caracteres.
           También debe de mostrar la cantidad de caracteres usados hasta el momento. 
@@ -713,98 +1000,6 @@ class upload_notification_body_lenght(DjangoSeleniumTestCase):
         except TimeoutException:
             # Si no aparece mensaje, eso tambien es valido
             pass   
-
-    """
-
-#SM-67 (Prueba 15)
-class change_password_success_teacher(DjangoSeleniumTestCase):    
-
-    SM-67
-
-   Realizar un cambio de contraseña de forma exitosa con un usuario con el rol de profesor
-
-    Datos:
-        - User: profesor3@pruebas.com / Teacher@100
-        - Password = {Amonestacion56-}
-
-    Resultado esperado:
-        - Se va a mostrar una notificación indicando que la contraseña fue cambiada con exito.
-
-    def test_upload_notification(self):
-        driver = self.driver
-        driver.get(self.live_server_url)
-
-        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('profesor@pruebas.com')
-        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('Teacher@100')
-        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
-
-        # Esperar a que redirija (puede variar)
-        element = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3/strong'))
-        )
-
-        driver.find_element(By.XPATH, '//*[@id="sidebar"]/div/div[1]/div[2]/div/div/div/ul/li[3]/a').click()
-
-        password_element = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[2]/div/div/div/form/div[7]/input'))
-        )
-        password_element.send_keys('Amonestacion56-')
-
-        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div[2]/div/div/div/form/div[8]/button').click()
-
-        alert = WebDriverWait(driver, 3).until(
-                EC.visibility_of_element_located((By.CLASS_NAME, "alert-message"))
-            )
-        alert_message = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div/div/div[1]/div[2]'))
-        )
-        self.assertEqual(alert_message.text, 'Profile Updated successfully')
-
-        
-        
-#SM-68 (Prueba 10)
-class change_password_success_teacher(DjangoSeleniumTestCase):    
-    SM-68
-
-   Realizar un cambio de contraseña con una longitud menor a 8 caracteres con un usuario con el rol de profesor
-
-    Datos:
-        - User: profesor3@pruebas.com / Teacher@100
-        - Password = {Datos1-}
-
-    Resultado esperado:
-        - Se va a mostrar una notificación indicando que realizar el cambio de contraseña 
-        debido a que la contraseña es muy corta y debe tener al menos 8 caracteres. 
-    def test_upload_notification(self):
-        driver = self.driver
-        driver.get(self.live_server_url)
-
-        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('profesor@pruebas.com')
-        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('Teacher@100')
-        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
-
-        # Esperar a que redirija (puede variar)
-        element = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3/strong'))
-        )
-
-        driver.find_element(By.XPATH, '//*[@id="sidebar"]/div/div[1]/div[2]/div/div/div/ul/li[3]/a').click()
-
-        password_element = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[2]/div/div/div/form/div[7]/input'))
-        )
-        password_element.send_keys('Datos1-')
-
-        driver.find_element(By.XPATH, '/html/body/div/div/main/div/div[2]/div/div/div/form/div[8]/button').click()
-
-        alert = WebDriverWait(driver, 3).until(
-                EC.visibility_of_element_located((By.CLASS_NAME, "alert-message"))
-            )
-        alert_message = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div/div/div[1]/div[2]'))
-        )
-        self.assertEqual(alert_message.text, 'Failed to Update Profile')
-    """
 
 if __name__ == '__main__':
     # Configurar el runner de pruebas
