@@ -320,7 +320,7 @@ class test_class_sm29(DjangoSeleniumTestCase):
 
         Address = {“Alajuela, Alajuela”, “Barrio Amon, San Jose”}
     Resultado esperado:
-        - La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student Added Successfully”
+        - La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student added successfully”
             En la ventana de “Admin Dashboard” deberá aparecer un estudiante nuevo en los datos.
     """
     def test_add_student_with_data(self):
@@ -383,7 +383,7 @@ class test_class_sm30(DjangoSeleniumTestCase):
 
         Address = {“Alajuela, Alajuela”, “Barrio Amon, San Jose”}
     Resultado esperado:
-        - La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student Added Successfully”
+        - La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student added successfully”
             En la ventana de “Admin Dashboard” deberá aparecer un estudiante nuevo en los datos.
     """
     def test_add_student_with_duplicated_data(self):
@@ -429,7 +429,7 @@ class test_class_sm30(DjangoSeleniumTestCase):
             )
             # Verificar el contenido del mensaje
             alert_text = alert.text.strip()
-            self.assertNotIn("Student Added Successfully", alert_text,
+            self.assertNotIn("Student added successfully", alert_text,
                              "El estudiante no debería haberse creado exitosamente con datos repetidos")
         except TimeoutException:
             # Si no aparece mensaje, eso tambien es valido
@@ -455,7 +455,7 @@ class test_class_sm31(DjangoSeleniumTestCase):
 
         Address = {“Alajuelita, Alajuela”}
     Resultado esperado:
-        La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student Added Successfully”
+        La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student added successfully”
             En la ventana de “Admin Dashboard” deberá aparecer un estudiante nuevo en los datos.
 
     """
@@ -1161,7 +1161,7 @@ class test_class_sm41(DjangoSeleniumTestCase):
 
         Address = {“Isla Tortuga, Limón”}
     Resultado esperado:
-        - La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student Added Successfully”
+        - La ventana de “Add Student” se limpiara y tendrá un mensaje en celeste indicando “Student added successfully”
             En la ventana de “Admin Dashboard” deberá aparecer un estudiante nuevo en los datos.
     """
     def test_add_student_with_alfanumeric_firstname(self):
