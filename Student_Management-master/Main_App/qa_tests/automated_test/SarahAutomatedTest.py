@@ -13,6 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import Select
 
 class DjangoSeleniumTestCase(unittest.TestCase):
     @classmethod
@@ -644,7 +645,6 @@ class edit_student_partial_update(DjangoSeleniumTestCase):
         )
 
         # cambiar la clase a 2
-        from selenium.webdriver.support.ui import Select
         select = Select(class_select)
         WebDriverWait(driver, 10).until(
             lambda d: any(o.text.strip() == "2" for o in Select(class_select).options)
@@ -812,6 +812,390 @@ class cancel_edit_teacher_discard_changes(DjangoSeleniumTestCase):
                 break
 
         self.assertTrue(name_still_rob, "El cambio de nombre fue guardado a pesar de cancelar la edición.")
+
+# SM-16
+class edit_teacher_updated_at_change(DjangoSeleniumTestCase):
+    """
+    SM-16
+
+    Validar que se actualice el campo “Updated At” tras una edición en profesores.
+
+    Datos de prueba:
+        - Usuario: admin@pruebas.com / pruebas
+        - Profesor objetivo: Roberto Gomez
+        - Campo editado: Last Name → Arias
+
+    Resultado esperado:
+        - El valor de la columna “Updated At” cambia tras guardar la edición.
+    """
+    def test_edit_teacher_updated_at_change(self):
+        import re
+
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        # login como admin
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        # ir a vista de profesores
+        driver.get(self.live_server_url + "/manageteacher/")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
+
+        # buscar profesor "Roberto"
+        target_row = None
+        for row in driver.find_elements(By.XPATH, '//table/tbody/tr'):
+            if row.is_displayed() and "roberto" in row.text.lower():
+                target_row = row
+                break
+
+        self.assertIsNotNone(target_row, "No se encontró al profesor 'Roberto'.")
+
+        # extraer Updated At usando regex
+        row_text = target_row.text
+        timestamp_pattern = r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, \d{4}, \d{1,2}:\d{2} (?:a|p)\.m\."
+        matches = re.findall(timestamp_pattern, row_text)
+
+        print("Texto original de la fila:", row_text)
+        print("Timestamps encontrados:", matches)
+
+        self.assertGreaterEqual(len(matches), 2, "No se encontraron suficientes timestamps para validar 'Updated At'.")
+        original_updated_at = matches[1]
+
+        # ir a editar
+        edit_btn = target_row.find_element(By.XPATH, './/td[last()-1]/a')
+        edit_btn.click()
+
+        # editar last name
+        last_name_input = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.NAME, "lastname"))
+        )
+        last_name_input.clear()
+        last_name_input.send_keys("Arias")
+
+        # clic en Update
+        update_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//button[@type="submit" and contains(text(), "Update")]'))
+        )
+        driver.execute_script("arguments[0].click();", update_btn)
+
+        # volver a lista de profesores
+        driver.get(self.live_server_url + "/manageteacher/")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
+
+        # volver a buscar a Roberto
+        updated_row = None
+        for row in driver.find_elements(By.XPATH, '//table/tbody/tr'):
+            if row.is_displayed() and "roberto" in row.text.lower():
+                updated_row = row
+                break
+
+        self.assertIsNotNone(updated_row, "No se encontró al profesor 'Roberto' tras la edición.")
+
+        updated_text = updated_row.text
+        updated_matches = re.findall(timestamp_pattern, updated_text)
+
+        print("Texto actualizado de la fila:", updated_text)
+        print("Timestamps después de editar:", updated_matches)
+
+        self.assertGreaterEqual(len(updated_matches), 2, "No se encontraron timestamps tras la edición.")
+        new_updated_at = updated_matches[1]
+
+        self.assertNotEqual(
+            original_updated_at,
+            new_updated_at,
+            f"El campo 'Updated At' no se actualizó. Antes: {original_updated_at}, Ahora: {new_updated_at}")
+        
+# SM-17
+class edit_student_medium_update(DjangoSeleniumTestCase):
+    """
+    SM-17
+
+    Validar que al cambiar la opción “Medium” se actualice correctamente en la lista.
+
+    Datos de prueba:
+        - Usuario: admin@pruebas.com / pruebas
+        - Estudiante objetivo: Kristel
+        - Campo a modificar: Medium -> SemiEng
+
+    Resultado esperado:
+        - El campo “Medium” se actualiza correctamente.
+        - El valor actualizado aparece reflejado en la tabla.
+    """
+    def test_edit_student_medium_update(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        # login como administrador
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        # ir al listado de estudiantes
+        driver.get(self.live_server_url + "/managestudent/")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
+
+        # buscar estudiante Kristel
+        target_row = None
+        for row in driver.find_elements(By.XPATH, '//table/tbody/tr'):
+            if row.is_displayed() and "kristel" in row.text.lower():
+                target_row = row
+                break
+
+        self.assertIsNotNone(target_row, "No se encontró al estudiante 'Kristel'.")
+
+        # editar estudiante
+        edit_btn = target_row.find_element(By.XPATH, './/td[last()-1]/a')
+        edit_btn.click()
+
+        # esperar campo Medium
+        medium_select = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.NAME, "medium"))
+        )
+        from selenium.webdriver.support.ui import Select
+        Select(medium_select).select_by_visible_text("SemiEng")
+
+        # enviar cambios
+        submit_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//button[@type="submit" and contains(text(), "Submit")]'))
+        )
+        driver.execute_script("arguments[0].click();", submit_btn)
+
+        # recargar y revisar el cambio en la tabla
+        driver.get(self.live_server_url + "/managestudent/")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
+
+        updated = False
+        for row in driver.find_elements(By.XPATH, '//table/tbody/tr'):
+            if row.is_displayed() and "kristel" in row.text.lower() and "semieng" in row.text.lower():
+                updated = True
+                break
+
+        self.assertTrue(updated, "El campo 'Medium' no se actualizó correctamente a 'SemiEng'.")
+
+# SM-20
+class edit_student_empty_firstname(DjangoSeleniumTestCase):
+    """
+    SM-20
+
+    Validar que el sistema impide actualizar los datos de un estudiante si el campo de nombre (First Name) se deja vacío.
+
+    Datos de prueba:
+        - Usuario: admin@pruebas.com / pruebas
+        - Estudiante objetivo: Kristel
+        - Acción: borrar el first name y tratar de guardar
+
+    Resultado esperado:
+        - No se permite enviar el formulario
+        - No aparece mensaje de éxito
+    """
+    def test_edit_student_empty_firstname(self): # tambien falla, error encontrado
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        # login como admin
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        # ir al listado de estudiantes
+        driver.get(self.live_server_url + "/managestudent/")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
+
+        # buscar a Kristel
+        target_row = None
+        for row in driver.find_elements(By.XPATH, '//table/tbody/tr'):
+            if row.is_displayed() and "kristel" in row.text.lower():
+                target_row = row
+                break
+
+        self.assertIsNotNone(target_row, "No se encontró un estudiante con nombre 'Kristel'.")
+        edit_btn = target_row.find_element(By.XPATH, './/td[last()-1]/a')
+        edit_btn.click()
+
+        # borrar campo de First Name
+        first_name_input = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.NAME, 'firstname'))
+        )
+        first_name_input.clear()
+
+        # clic en Submit
+        submit_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//button[@type="submit" and contains(text(), "Submit")]'))
+        )
+        driver.execute_script("arguments[0].click();", submit_btn)
+
+        time.sleep(1)
+
+        # revisar que NO se muestre mensaje de exito
+        try:
+            success_msg = WebDriverWait(driver, 3).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//*[contains(text(), "Student upadated successfully")]') # tiene un typo en la notif para estudiante, asi es
+                )
+            )
+            self.fail("Se mostró mensaje de éxito a pesar de dejar el nombre vacío.")
+        except TimeoutException:
+            pass
+
+# SM-21
+class edit_student_empty_email(DjangoSeleniumTestCase): # tambien falla, error encontrado
+    """
+    SM-21
+
+    Validar que el sistema impide actualizar los datos de un estudiante si el campo de email se deja vacío.
+
+    Datos de prueba:
+        - Usuario: admin@pruebas.com / pruebas
+        - Estudiante objetivo: Kristel
+        - Acción: borrar el email y tratar de guardar
+
+    Resultado esperado:
+        - No se permite enviar el formulario
+        - No aparece mensaje de éxito
+    """
+
+    def test_edit_student_empty_email(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        # login como administrador
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        # ir al listado de estudiantes
+        driver.get(self.live_server_url + "/managestudent/")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
+
+        # buscar fila del estudiante Kristel
+        target_row = None
+        for row in driver.find_elements(By.XPATH, '//table/tbody/tr'):
+            if row.is_displayed() and "kristel" in row.text.lower():
+                target_row = row
+                break
+
+        self.assertIsNotNone(target_row, "No se encontró un estudiante con nombre 'Kristel'.")
+        edit_btn = target_row.find_element(By.XPATH, './/td[last()-1]/a')
+        edit_btn.click()
+
+        # borrar campo de email
+        email_input = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '//input[@name="email"]'))
+        )
+        email_input.clear()
+
+        # clic en "Submit"
+        submit_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//button[@type="submit" and contains(text(), "Submit")]'))
+        )
+        driver.execute_script("arguments[0].click();", submit_btn)
+
+        time.sleep(1)  # dar tiempo a que se procese el intento de guardar
+
+        # revisar que NO se muestre mensaje de exito
+        try:
+            success_msg = WebDriverWait(driver, 3).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//*[contains(text(), "Student upadated successfully")]')  # tiene un typo en la notif para estudiante, asi es)
+                )
+            )
+            self.fail("Se mostró mensaje de éxito a pesar de dejar el email vacío.")
+        except TimeoutException:
+            print("El sistema rechazó correctamente el email vacío.")
+
+# SM-22
+class edit_teacher_address_special_characters(DjangoSeleniumTestCase):
+    """
+    SM-22
+
+    Validar que al escribir caracteres especiales en el campo “Address” de profesores no se presenten errores ni comportamientos inesperados.
+
+    Datos de prueba:
+        - "Calle 5"
+        - "#123-Apt°"
+        - "‘Barrio Sur"
+
+    Resultado esperado:
+        - El valor se guarda y muestra correctamente en la tabla, sin errores visuales o lógicos.
+    """
+    def test_edit_teacher_address_special_characters(self):
+        driver = self.driver
+        driver.get(self.live_server_url)
+
+        # login como admin
+        driver.find_element(By.XPATH, '//*[@id="email"]').send_keys('admin@pruebas.com')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[3]').send_keys('pruebas')
+        driver.find_element(By.XPATH, '/html/body/div/div/form/input[4]').click()
+
+        WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
+        )
+
+        # lista de direcciones con caracteres especiales
+        special_addresses = ["Calle 5", "#123-Apt°", "‘Barrio Sur"]
+
+        for address in special_addresses:
+            # ir a vista de profesores
+            driver.get(self.live_server_url + "/manageteacher/")
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
+
+            # buscar profesor "Roberto"
+            target_row = None
+            for row in driver.find_elements(By.XPATH, '//table/tbody/tr'):
+                if row.is_displayed() and "roberto" in row.text.lower():
+                    target_row = row
+                    break
+
+            self.assertIsNotNone(target_row, "No se encontró un profesor con nombre 'Roberto'.")
+
+            # ir al formulario de edicion
+            edit_btn = target_row.find_element(By.XPATH, './/td[last()-1]/a')
+            edit_btn.click()
+
+            # esperar campo Address y cambiar
+            address_input = WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.NAME, "address"))
+            )
+            address_input.clear()
+            address_input.send_keys(address)
+
+            # guardar cambios
+            submit_btn = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, '//button[@type="submit" and contains(text(), "Update")]'))
+            )
+            driver.execute_script("arguments[0].click();", submit_btn)
+
+            # volver a la tabla y revisar que se guardo bien
+            driver.get(self.live_server_url + "/manageteacher/")
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
+
+            updated = False
+            for row in driver.find_elements(By.XPATH, '//table/tbody/tr'):
+                if row.is_displayed() and "roberto" in row.text.lower() and address.lower() in row.text.lower():
+                    updated = True
+                    break
+
+            self.assertTrue(
+                updated,
+                f"La dirección '{address}' no se guardó o mostró correctamente en la tabla.")
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
