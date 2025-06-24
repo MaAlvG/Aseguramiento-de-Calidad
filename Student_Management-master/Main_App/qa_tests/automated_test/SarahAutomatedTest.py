@@ -14,13 +14,14 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
+from .helpers.reset_datos_prueba_sarah import *
 
 class DjangoSeleniumTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print(f"\n=== Configurando {cls.__name__} ===")
         cls.chrome_options = Options()
-        # cls.chrome_options.add_argument('--headless')  # Actívalo si no quieres ver el navegador
+        # cls.chrome_options.add_argument('--headless')
         cls.chrome_options.add_argument('--no-sandbox')
         cls.chrome_options.add_argument('--disable-dev-shm-usage')
         cls.chrome_options.add_argument('--disable-gpu')
@@ -56,7 +57,7 @@ class DjangoSeleniumTestCase(unittest.TestCase):
                 cls.stop_django_server()
 
     def setUp(self):
-        print(f"  → Iniciando: {self._testMethodName}")
+        print(f"  -> Iniciando: {self._testMethodName}")
         try:
             service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=self.chrome_options)
@@ -68,7 +69,7 @@ class DjangoSeleniumTestCase(unittest.TestCase):
             self.skipTest(f"Error inesperado al configurar WebDriver: {e}")
 
     def tearDown(self):
-        print(f"  ← Finalizando: {self._testMethodName}")
+        print(f"  <- Finalizando: {self._testMethodName}")
         if hasattr(self, 'driver'):
             try:
                 self.driver.quit()
@@ -185,10 +186,10 @@ class filter_teacher_by_name(DjangoSeleniumTestCase): # tiene que fallar, error 
 
     Datos:
         - Usuario: admin@pruebas.com / pruebas
-        - Valor de búsqueda: "Profe 1"
+        - Valor de búsqueda: "Roberto"
 
     Resultado esperado:
-        - Se muestra en la tabla solo el profesor cuyo nombre contiene "Profe 1"
+        - Se muestra en la tabla solo el profesor cuyo nombre contiene "Roberto"
     """
     def test_filter_teacher_by_name(self):
         driver = self.driver
@@ -204,6 +205,8 @@ class filter_teacher_by_name(DjangoSeleniumTestCase): # tiene que fallar, error 
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
 
+        reset_roberto(driver, self.live_server_url)  # funcion auxiliar para resetear el profesor Roberto a su estado original
+
         # vamos a la vista de profesores
         driver.get(self.live_server_url + "/manageteacher/")
 
@@ -212,7 +215,7 @@ class filter_teacher_by_name(DjangoSeleniumTestCase): # tiene que fallar, error 
             EC.visibility_of_element_located((By.XPATH, '//input[@placeholder="Search…"]'))
         )
         search_box.clear()
-        search_box.send_keys("Profe 1")
+        search_box.send_keys("Roberto")
         search_box.send_keys(Keys.ENTER)
 
         # esperar que la tabla se actualice (si es que se actualiza)
@@ -227,7 +230,7 @@ class filter_teacher_by_name(DjangoSeleniumTestCase): # tiene que fallar, error 
 
         for row in visible_rows:
             row_text = row.text.lower()
-            self.assertIn("profe 1", row_text, "La fila visible no contiene 'Profe 1'")
+            self.assertIn("roberto", row_text, "La fila visible no contiene 'Roberto'")
 
 # SM-03
 class edit_teacher_address(DjangoSeleniumTestCase):
@@ -256,6 +259,8 @@ class edit_teacher_address(DjangoSeleniumTestCase):
         WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
+
+        reset_roberto(driver, self.live_server_url)  # funcion auxiliar para resetear el profesor Roberto a su estado original
 
         # ir a lista de profesores
         driver.get(self.live_server_url + "/manageteacher/")
@@ -307,7 +312,7 @@ class edit_teacher_address(DjangoSeleniumTestCase):
         self.assertTrue(updated, "La dirección no se actualizó correctamente en la tabla.")
 
 # SM-04
-class test_edit_teacher_empty_email(DjangoSeleniumTestCase): # tambien falla, error encontrado
+class edit_teacher_empty_email(DjangoSeleniumTestCase): # tambien falla, error encontrado
     """
     SM-04
 
@@ -334,6 +339,8 @@ class test_edit_teacher_empty_email(DjangoSeleniumTestCase): # tambien falla, er
         WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
+
+        reset_roberto(driver, self.live_server_url)  # funcion auxiliar para resetear el profesor Roberto a su estado original
 
         # ir al listado de profesores
         driver.get(self.live_server_url + "/manageteacher/")
@@ -402,6 +409,8 @@ class delete_teacher_by_name(DjangoSeleniumTestCase):
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
 
+        reset_borrador_teacher(driver, self.live_server_url)  # funcion auxiliar para resetear el profesor Borrador a su estado original
+
         # ir al listado de profesores
         driver.get(self.live_server_url + "/manageteacher/")
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
@@ -463,6 +472,8 @@ class edit_teacher_invalid_email(DjangoSeleniumTestCase):
         WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
+
+        reset_roberto(driver, self.live_server_url)  # funcion auxiliar para resetear el profesor Roberto a su estado original
 
         # ir directamente a la vista de profesores
         driver.get(self.live_server_url + "/manageteacher/")
@@ -549,6 +560,8 @@ class edit_teacher_empty_firstname(DjangoSeleniumTestCase): # tambien falla, err
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
 
+        reset_roberto(driver, self.live_server_url)  # funcion auxiliar para resetear el profesor Roberto a su estado original
+
         # ir al listado de profesores
         driver.get(self.live_server_url + "/manageteacher/")
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
@@ -589,7 +602,6 @@ class edit_teacher_empty_firstname(DjangoSeleniumTestCase): # tambien falla, err
         except TimeoutException:
             pass
 
-
 # SM-11
 class edit_student_partial_update(DjangoSeleniumTestCase):
     """
@@ -618,6 +630,8 @@ class edit_student_partial_update(DjangoSeleniumTestCase):
         WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
+
+        reset_kristel(driver, self.live_server_url)  # funcion auxiliar para resetear el estudiante Kristel a su estado original
 
         # ir al listado de estudiantes
         driver.get(self.live_server_url + "/managestudent/")
@@ -705,6 +719,8 @@ class delete_student_by_name(DjangoSeleniumTestCase):
             )
         )
 
+        reset_borrador_student(driver, self.live_server_url)  # funcion auxiliar para resetear el estudiante Borrador a su estado original
+
         # ir al listado de estudiantes
         driver.get(self.live_server_url + "/managestudent/")
         WebDriverWait(driver, 10).until(
@@ -769,6 +785,8 @@ class cancel_edit_teacher_discard_changes(DjangoSeleniumTestCase):
                 (By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3')
             )
         )
+
+        reset_roberto(driver, self.live_server_url)  # funcion auxiliar para resetear el profesor Roberto a su estado original
 
         # ir a vista de profesores
         driver.get(self.live_server_url + "/manageteacher/")
@@ -843,6 +861,8 @@ class edit_teacher_updated_at_change(DjangoSeleniumTestCase):
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
 
+        reset_roberto(driver, self.live_server_url)  # funcion auxiliar para resetear el profesor Roberto a su estado original
+
         # ir a vista de profesores
         driver.get(self.live_server_url + "/manageteacher/")
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
@@ -866,6 +886,9 @@ class edit_teacher_updated_at_change(DjangoSeleniumTestCase):
 
         self.assertGreaterEqual(len(matches), 2, "No se encontraron suficientes timestamps para validar 'Updated At'.")
         original_updated_at = matches[1]
+
+        print("Esperando 60 segundos para asegurar cambio de timestamp... (porque quise automatizar los datos de prueba jiji)")
+        time.sleep(60)
 
         # ir a editar
         edit_btn = target_row.find_element(By.XPATH, './/td[last()-1]/a')
@@ -940,6 +963,8 @@ class edit_student_medium_update(DjangoSeleniumTestCase):
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
 
+        reset_kristel(driver, self.live_server_url)  # funcion auxiliar para resetear el estudiante Kristel a su estado original
+
         # ir al listado de estudiantes
         driver.get(self.live_server_url + "/managestudent/")
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
@@ -1011,6 +1036,8 @@ class edit_student_empty_firstname(DjangoSeleniumTestCase):
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
 
+        reset_kristel(driver, self.live_server_url)  # funcion auxiliar para resetear el estudiante Kristel a su estado original
+
         # ir al listado de estudiantes
         driver.get(self.live_server_url + "/managestudent/")
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
@@ -1081,6 +1108,8 @@ class edit_student_empty_email(DjangoSeleniumTestCase): # tambien falla, error e
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
 
+        reset_kristel(driver, self.live_server_url) # funcion auxiliar para resetear la estudiante Kristel a su estado original
+
         # ir al listado de estudiantes
         driver.get(self.live_server_url + "/managestudent/")
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//table')))
@@ -1148,6 +1177,12 @@ class edit_teacher_address_special_characters(DjangoSeleniumTestCase):
         WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.XPATH, '/html/body/div/div/main/div/div[1]/div/h3'))
         )
+
+        reset_roberto(driver, self.live_server_url) # funcion auxiliar para resetear el profesor Roberto a su estado original
+
+        # redireccionar a la pagina de profesores
+        driver.get(self.live_server_url + "/manageteacher/")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'table')))
 
         # lista de direcciones con caracteres especiales
         special_addresses = ["Calle 5", "#123-Apt°", "‘Barrio Sur"]
